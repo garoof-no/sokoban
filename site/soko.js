@@ -15,29 +15,40 @@ const newGame = str => {
 
 const url = (() => {
   const a = [" ", "#", ".", "@", "+", "$", "*", "\n"];
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
   return {
-    read: (b64) => {
-      const str = atob(b64.replace(/_/g, '/').replace(/-/g, '+'))
+    read: (str) => {
       let res = "";
-      for (let i = 0; i < str.length; i++) {
-        const b = str.charCodeAt(i);
-        const first = b >>> 3;
-        res += a[first];
-        const second = b & 0b111;
-        res += a[second];
+      for (const c of str) {
+        const b = alphabet.indexOf(c)
+        if (b >= 0) {
+          const first = b >>> 3;
+          res += a[first];
+          const second = b & 0b111;
+          res += a[second];
+        } else {
+          res += "  ";
+        }
       }
       return res;
     },
     write: (str) => {
       let res = "";
       for (let i = 0; i < str.length; i+= 2) {
-        let b = a.indexOf(str[i]) << 3;
-        if (i + 1 < str.length) {
-          b += a.indexOf(str[i + 1]);
+        let b = 0;
+        const first = a.indexOf(str[i]);
+        if (first >= 0) {
+          b = first << 3;
         }
-        res += String.fromCharCode(b);
+        if (i + 1 < str.length) {
+          const second = a.indexOf(str[i + 1]);
+          if (second >= 0) {
+            b += second;
+          }
+        }
+        res += alphabet[b];
       }
-      return btoa(res).replace(/\//g, '_').replace(/\+/g, '-');
+      return res;
     }
   };
 })();
