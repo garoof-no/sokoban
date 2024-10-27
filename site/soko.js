@@ -12,20 +12,34 @@ const newGame = str => {
   }
 };
 
+
 const url = (() => {
-  const a = [
-    ["_", " "],
-    ["w", "#"],
-    [".", "."],
-    ["p", "@"],
-    ["P", "+"],
-    ["b", "$"],
-    ["B", "*"],
-    ["-", "\n"],
-  ];
-  const halp = (map) => (str) =>
-    [...str].map((c) => (map.has(c) ? map.get(c) : " ")).join("");
-  return { from: halp(new Map(a)), to: halp(new Map(a.map((x) => [x[1], x[0]]))) };
+  const a = [" ", "#", ".", "@", "+", "$", "*", "\n"];
+  return {
+    read: (b64) => {
+      const str = atob(b64.replace(/_/g, '/').replace(/-/g, '+'))
+      let res = "";
+      for (let i = 0; i < str.length; i++) {
+        const b = str.charCodeAt(i);
+        const first = b >>> 3;
+        res += a[first];
+        const second = b & 0b111;
+        res += a[second];
+      }
+      return res;
+    },
+    write: (str) => {
+      let res = "";
+      for (let i = 0; i < str.length; i+= 2) {
+        let b = a.indexOf(str[i]) << 3;
+        if (i + 1 < str.length) {
+          b += a.indexOf(str[i + 1]);
+        }
+        res += String.fromCharCode(b);
+      }
+      return btoa(res).replace(/\//g, '_').replace(/\+/g, '-');
+    }
+  };
 })();
 
 const at = (board, pos) => {
@@ -150,7 +164,14 @@ const dirNum = (str) => {
 };
 
 
-window.onload = () => {
+const colors = [
+  "#000000", "#1D2B53", "#7E2553", "#008751",
+  "#AB5236", "#5F574F", "#C2C3C7", "#FFF1E8",
+  "#FF004D", "#FFA300", "#FFEC27", "#00E436",
+  "#29ADFF", "#83769C", "#FF77A8", "#FFCCAA"
+];
+
+const start = (str) => {
   const gameEl = document.querySelector("#game");
   const canvas = gameEl.appendChild(document.createElement("canvas"));
   const ctx = canvas.getContext("2d");
@@ -244,15 +265,38 @@ z
   })();
 
   document.onkeypress = (event) => perform(event.key.toLowerCase())();
-  startLevel(`
-########
-#   @  #
-#.$    #
-########
-`);
+  startLevel(str);
   canvas.width = Math.max(...game.board.map((row) => row.length)) * 48;
   canvas.height = game.board.length * 48;
   ctx.imageSmoothingEnabled = false;
   draw(game);
+};
+
+const defaultLevel = `
+    #####
+    #   #
+    #$  #
+  ###  $##
+  #  $ $ #
+### # ## #   ######
+#   # ## #####  ..#
+# $  $          ..#
+##### ### #@##  ..#
+    #     #########
+    #######
+`;
+
+window.onload = () => {
+  let levelStr = defaultLevel;
+  const params = new URLSearchParams(location.search);
+  const urlLevel = params.get("level");
+  if (urlLevel !== null) {
+    try {
+      levelStr = url.read(urlLevel);
+    } catch (e) {
+      console.error(e);
+    }
+  }
+  start(levelStr);
 };
 
