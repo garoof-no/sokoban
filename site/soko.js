@@ -1,4 +1,12 @@
-const vec = (x, y) => ({ x: x, y: y });
+
+const vecs = new Map();
+const vec = (x, y) => {
+  const key = `${x},${y}`;
+  if (!vecs.has(key)) {
+    vecs.set(key, { x: x, y: y });
+  }
+  return vecs.get(key);
+}
 const add = (a, b) => vec(a.x + b.x, a.y + b.y);
 const neg = (v) => vec(-v.x, -v.y);
 
@@ -183,47 +191,107 @@ const colors = [
 ];
 
 const start = (str) => {
+
+  const style = document.head.appendChild(document.createElement("style"));
+    style.innerText = `
+    button {
+      display: inline-block; border-style: none;
+      padding: 0;
+      margin: 0;
+      height: 48px;
+      width: 48px;
+      background-color: #AAAAAA;
+    }
+    button:hover {
+      background-color: #888888;
+    }
+    button:active {
+      background-color: #444444;
+    }
+    button img {
+      mix-blend-mode: multiply;
+    }`;
+
   const gameEl = document.querySelector("#game");
-  const canvas = gameEl.appendChild(document.createElement("canvas"));
-  const ctx = canvas.getContext("2d");
+  const gamePre = gameEl.appendChild(document.createElement("pre"));
   const solutionEl = gameEl.appendChild(document.createElement("p"));
   const wonEl = gameEl.appendChild(document.createElement("p"));
   const controlsEl = gameEl.appendChild(document.createElement("table"));
+  
+  gamePre.style = "line-height: 0;";
 
-  const drawTile = (() => {
-    const img = document.querySelector("#sprites");
-    img.remove();
-    const draw = (sprite, x, y) =>
-      ctx.drawImage(
-        img,
-        sprite.x * 16,
-        sprite.y * 16,
-        16,
-        16,
-        x * 48,
-        y * 48,
-        48,
-        48
-      );
-    const map = new Map([
+  const canvas = gameEl.appendChild(document.createElement("canvas"));
+  const ctx = canvas.getContext("2d");
+
+  const img = document.querySelector("#sprites");
+  img.remove();
+  
+  canvas.width = 48;
+  canvas.height = 48;
+  ctx.imageSmoothingEnabled = false;
+
+  const imgs = new Map(
+    [
       [" ", vec(0, 0)],
       ["#", vec(1, 0)],
       ["@", vec(0, 1)],
       ["+", vec(0, 1)],
       ["$", vec(1, 1)],
       [".", vec(0, 2)],
-      ["*", vec(1, 2)],
-    ]);
-    return (s, x, y) => draw(map.has(s) ? map.get(s) : vec(0, 0), x, y);
-  })();
+      ["*", vec(1, 2)]
+    ].map((a) => {
+      ctx.drawImage(img, a[1].x * 16, a[1].y * 16, 16, 16, 0, 0, 48, 48);
+      return [a[0], canvas.toDataURL()];
+    })
+  );
+  canvas.remove();
+
+  const descriptions = {
+    w: "Up",
+    a: "Left",
+    s: "Down",
+    d: "Right",
+    z: "Undo",
+    y: "Redo",
+    r: "Restart"
+  };
+  let perform;
 
   const draw = (game) => {
-    game.board.forEach((row, y) => row.forEach((tile, x) => drawTile(tile, x, y)));
     solutionEl.innerText = game.moves === "" ? "..." : game.moves;
     wonEl.innerText = game.won ? "Yay!" : "...";
+
+    gamePre.replaceChildren();
+    const player = playerPos(game.board);
+    const buttons = new Map(
+      [
+        [add(player, vec(0, -1)), "w"],
+        [add(player, vec(-1, 0)), "a"],
+        [add(player, vec(0, 1)), "s"],
+        [add(player, vec(1, 0)), "d"]
+      ]
+    );
+    game.board.forEach((row, y) => {
+      row.forEach((tile, x) => {
+        const pos = vec(x, y);
+        const img = document.createElement("img");
+        img.src = imgs.get(at(game.board, vec(x, y)));
+        img.alt = "";
+        if (buttons.has(pos)) {
+          const command = buttons.get(pos);
+          const button = gamePre.appendChild(document.createElement("button"));
+          button.title = `${descriptions[command]} (${command}))`;
+          button.onclick = perform(command);
+          button.appendChild(img);
+        } else {
+          gamePre.appendChild(img);
+        }
+      });
+      gamePre.appendChild(document.createElement("br"));
+    });
   };
 
-  const perform = (() => {
+  perform = (() => {
     const makeMove = dirNum => move(game, dirs[dirNum]);
     const commands = new Map([
       ["w", () => makeMove(0)],
@@ -243,15 +311,6 @@ const start = (str) => {
   })();
 
   (() => {
-    const descriptions = {
-      w: "Up",
-      a: "Left",
-      s: "Down",
-      d: "Right",
-      z: "Undo",
-      y: "Redo",
-      r: "Restart"
-    };
   
     const layout = `
  w r y
@@ -277,9 +336,6 @@ z
 
   document.onkeypress = (event) => perform(event.key.toLowerCase())();
   startLevel(str);
-  canvas.width = Math.max(...game.board.map((row) => row.length)) * 48;
-  canvas.height = game.board.length * 48;
-  ctx.imageSmoothingEnabled = false;
   draw(game);
 };
 
