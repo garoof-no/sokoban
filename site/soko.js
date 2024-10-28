@@ -7,19 +7,21 @@ const vec = (x, y) => {
   }
   return vecs.get(key);
 }
+
+const tileSize = vec(48, 48);
+
 const add = (a, b) => vec(a.x + b.x, a.y + b.y);
 const neg = (v) => vec(-v.x, -v.y);
 
 const newGame = str => {
-  const board = str.split("\n").map((x) => x.split(""));
+  const level = str.split("\n").map((x) => x.split(""));
   return {
-    board: board,
+    level: level,
     moves: "",
     redo: "",
-    won: won(board)
+    won: won(level)
   }
 };
-
 
 const url = (() => {
   const a = [" ", "#", ".", "@", "+", "$", "*", "\n"];
@@ -61,25 +63,43 @@ const url = (() => {
   };
 })();
 
-const at = (board, pos) => {
-  if (pos.y < 0 || pos.y >= board.length) {
-    return "#";
+const style = (bc, hc, ac) => `button {
+      display: inline-block; border-style: none;
+      padding: 0;
+      margin: 0;
+      height: ${tileSize.x}px;
+      width: ${tileSize.y}px;
+      background-color: ${bc};
+    }
+    button:hover {
+      background-color: ${hc};
+    }
+    button:active {
+      background-color: ${ac};
+    }
+    button img {
+      mix-blend-mode: multiply;
+    }`;
+
+const at = (level, pos, notfound = "#") => {
+  if (pos.y < 0 || pos.y >= level.length) {
+    return notfound;
   }
-  const row = board[pos.y];
+  const row = level[pos.y];
   if (pos.x < 0 || pos.x >= row.length) {
-    return "#";
+    return notfound;
   }
   return row[pos.x];
 };
 
-const won = (board) =>
-  !board.some((row) => row.some((tile) => tile === "." || tile === "+"));
+const won = (level) =>
+  !level.some((row) => row.some((tile) => tile === "." || tile === "+"));
 
-const put = (board, pos, tile) => (board[pos.y][pos.x] = tile);
+const put = (level, pos, tile) => (level[pos.y][pos.x] = tile);
 
-const playerPos = (board) => {
-  for (let y = 0; y < board.length; y++) {
-    const row = board[y];
+const playerPos = (level) => {
+  for (let y = 0; y < level.length; y++) {
+    const row = level[y];
     for (let x = 0; x < row.length; x++) {
       const tile = row[x];
       if (tile === "@" || tile === "+") {
@@ -87,7 +107,7 @@ const playerPos = (board) => {
       }
     }
   }
-  throw "no player on board? :(";
+  throw "no player on level? :(";
 };
 
 let game;
@@ -99,19 +119,19 @@ const startLevel = (str) => {
 const player = ["@", "+"];
 const box = ["$", "*"];
 
-const step = (board, type, pos, dir) => {
-  const tile = at(board, pos);
+const step = (level, type, pos, dir) => {
+  const tile = at(level, pos);
     if (tile !== type[0] && tile !== type[1]) {
     return false;
   }
   
   const nextPos = add(pos, dir);
-  const nextTile = at(board, nextPos);
+  const nextTile = at(level, nextPos);
   if (nextTile !== " " && nextTile !== ".") {
     return false;
   }
-  put(board, pos, tile === type[0] ? " " : ".");
-  put(board, nextPos, nextTile === " " ? type[0] : type[1]);
+  put(level, pos, tile === type[0] ? " " : ".");
+  put(level, nextPos, nextTile === " " ? type[0] : type[1]);
   return true;
 };
 
@@ -126,9 +146,9 @@ const move = (game, dir) => {
   if (game.won) {
     return;
   }
-  const pos = playerPos(game.board);
-  const boxMoved = step(game.board, box, add(pos, dir.vec), dir.vec);
-  const playerMoved = step(game.board, player, pos, dir.vec);
+  const pos = playerPos(game.level);
+  const boxMoved = step(game.level, box, add(pos, dir.vec), dir.vec);
+  const playerMoved = step(game.level, player, pos, dir.vec);
   const moveMade = boxMoved
     ? dir.name.toUpperCase()
     : playerMoved
@@ -136,29 +156,29 @@ const move = (game, dir) => {
     : "";
   game.moves += moveMade;
   game.redo = "";
-  game.won = won(game.board);
+  game.won = won(game.level);
 };
 
 const undo = (game) => {
   if (game.moves === "") {
     return;
   }
-  const pos = playerPos(game.board);
+  const pos = playerPos(game.level);
   const moveMade = game.moves.slice(-1);
   const forward = dirs[dirNum(moveMade)].vec;
   const back = neg(forward);
-  if (!step(game.board, player, pos, back)) {
+  if (!step(game.level, player, pos, back)) {
     throw "player won't move back :(";
   }
 
   if (moveMade === moveMade.toUpperCase()) {
-    if (!step(game.board, box, add(pos, forward), back)) {
+    if (!step(game.level, box, add(pos, forward), back)) {
       throw "box won't move back :(";
     }
   }
   game.moves = game.moves.slice(0, -1);
   game.redo = moveMade + game.redo;
-  game.won = won(game.board);
+  game.won = won(game.level);
 };
 
 const restart = (game) => {
@@ -190,48 +210,14 @@ const colors = [
   "#29ADFF", "#83769C", "#FF77A8", "#FFCCAA"
 ];
 
-const start = (str) => {
-
-  let touch = false;
-  const style = document.head.appendChild(document.createElement("style"));
-    style.innerText = `
-    button {
-      display: inline-block; border-style: none;
-      padding: 0;
-      margin: 0;
-      height: 48px;
-      width: 48px;
-      background-color: #AAAAAA;
-    }
-    button:hover {
-      background-color: #888888;
-    }
-    button:active {
-      background-color: #444444;
-    }
-    button img {
-      mix-blend-mode: multiply;
-    }`;
-
-  const gameEl = document.querySelector("#game");
-  const gamePre = gameEl.appendChild(document.createElement("pre"));
-  const solutionEl = gameEl.appendChild(document.createElement("p"));
-  const wonEl = gameEl.appendChild(document.createElement("p"));
-  const controlsEl = gameEl.appendChild(document.createElement("table"));
-  
-  gamePre.style = "line-height: 0;";
-
-  const canvas = gameEl.appendChild(document.createElement("canvas"));
-  const ctx = canvas.getContext("2d");
-
-  const img = document.querySelector("#sprites");
-  img.remove();
-  
-  canvas.width = 48;
-  canvas.height = 48;
+const makeSprites = (img) => {
+  const canvas = document.body.appendChild(document.createElement("canvas"));
+  const ctx = canvas.getContext("2d");;
+  canvas.width = tileSize.x;
+  canvas.height = tileSize.y;
   ctx.imageSmoothingEnabled = false;
 
-  const imgs = new Map(
+  const sprites = new Map(
     [
       [" ", vec(0, 0)],
       ["#", vec(1, 0)],
@@ -241,11 +227,43 @@ const start = (str) => {
       [".", vec(0, 2)],
       ["*", vec(1, 2)]
     ].map((a) => {
-      ctx.drawImage(img, a[1].x * 16, a[1].y * 16, 16, 16, 0, 0, 48, 48);
+      ctx.drawImage(img, a[1].x * 16, a[1].y * 16, 16, 16, 0, 0, tileSize.x, tileSize.y);
       return [a[0], canvas.toDataURL()];
     })
   );
   canvas.remove();
+  return sprites;
+};
+
+const img = (tile, sprites) => {
+  const img = document.createElement("img");
+  img.src = sprites.get(tile);
+  img.alt = "";
+  return img;
+};
+
+const button = (tile, sprites) => {
+  const button = document.createElement("button");
+  button.appendChild(img(tile, sprites));
+  return button;
+};
+
+const tilemap = () => {
+  const pre = document.createElement("pre");
+  pre.style = "line-height: 0;";
+  return pre;
+};
+
+const start = (str, sprites) => {
+
+  document.head.appendChild(document.createElement("style")).innerText = style("#AAAAAA", "#888888", "#444444");
+  let touch = false;
+
+  const gameEl = document.querySelector("#game");
+  const gamePre = gameEl.appendChild(tilemap());
+  const solutionEl = gameEl.appendChild(document.createElement("p"));
+  const wonEl = gameEl.appendChild(document.createElement("p"));
+  const controlsEl = gameEl.appendChild(document.createElement("table"));
 
   const descriptions = {
     w: "Up",
@@ -263,7 +281,7 @@ const start = (str) => {
     wonEl.innerText = game.won ? "Yay!" : "...";
 
     gamePre.replaceChildren();
-    const player = playerPos(game.board);
+    const player = playerPos(game.level);
     const buttons = new Map(
       [
         [add(player, vec(0, -1)), "w"],
@@ -272,20 +290,16 @@ const start = (str) => {
         [add(player, vec(1, 0)), "d"]
       ]
     );
-    game.board.forEach((row, y) => {
+    game.level.forEach((row, y) => {
       row.forEach((tile, x) => {
         const pos = vec(x, y);
-        const img = document.createElement("img");
-        img.src = imgs.get(at(game.board, vec(x, y)));
-        img.alt = "";
         if (touch && buttons.has(pos)) {
           const command = buttons.get(pos);
-          const button = gamePre.appendChild(document.createElement("button"));
-          button.title = `${descriptions[command]} (${command}))`;
-          button.onclick = perform(command);
-          button.appendChild(img);
+          const btn = gamePre.appendChild(button(tile, sprites));
+          btn.title = `${descriptions[command]} (${command})`;
+          btn.onclick = perform(command);
         } else {
-          gamePre.appendChild(img);
+          gamePre.appendChild(img(tile, sprites));
         }
       });
       gamePre.appendChild(document.createElement("br"));
@@ -326,7 +340,7 @@ z
         const td = tr.appendChild(document.createElement("td"));
         if (c === "t") {
           const button = td.appendChild(document.createElement("button"));
-          button.style = "width: 200px; height: 48px;";
+          button.style = "width: 200px;";
           button.innerText = "Toggle particularly good touch controls!";
           button.onclick = () => {
             touch = !touch;
@@ -334,7 +348,6 @@ z
           };
         } else if (c !== " ") {
           const button = td.appendChild(document.createElement("button"));
-          button.style = "width: 48px; height: 48px;";
           button.innerText = c.toUpperCase();
           button.title = descriptions[c];
           button.onclick = perform(c);
@@ -343,9 +356,44 @@ z
     }
   })();
 
-  document.onkeypress = (event) => perform(event.key.toLowerCase())();
+  document.onkeypress = event => perform(event.key.toLowerCase())();
   startLevel(str);
   draw(game);
+};
+
+const edit = (str, sprites) => {
+
+  document.head.appendChild(document.createElement("style")).innerText = style("#FFFFFF", "#888888", "#444444");
+
+  startLevel(str);
+  
+  const gameEl = document.querySelector("#game");
+  const palette = gameEl.appendChild(document.createElement("p"));
+  const gamePre = gameEl.appendChild(tilemap());
+
+  let selected = " ";
+  const draw = () => {
+    gamePre.replaceChildren();
+    game.level.forEach((row, y) => {
+      row.forEach((tile, x) => {
+        const pos = vec(x, y);
+        const btn = gamePre.appendChild(button(tile, sprites));
+        btn.onclick = () => {
+          put(game.level, pos, selected);
+          draw();
+        };
+      });
+    gamePre.appendChild(document.createElement("br"));
+    });
+  };
+
+  [" ", "#", ".", "@", "+", "$", "*"].forEach(tile => {
+    const btn = palette.appendChild(button(tile, sprites));
+    btn.onclick = () => (selected = tile);
+  });
+  
+  
+  draw();
 };
 
 const defaultLevel = `
@@ -363,6 +411,11 @@ const defaultLevel = `
 `;
 
 window.onload = () => {
+
+  const img = document.querySelector("#sprites");
+  img.remove()
+  const sprites = makeSprites(img);
+
   let levelStr = defaultLevel;
   const params = new URLSearchParams(location.search);
   const urlLevel = params.get("level");
@@ -373,6 +426,11 @@ window.onload = () => {
       console.error(e);
     }
   }
-  start(levelStr);
+  if (params.has("edit")) {
+    edit(levelStr, sprites);
+  } else {
+    start(levelStr, sprites);
+  }
+  
 };
 
