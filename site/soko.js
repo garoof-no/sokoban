@@ -192,6 +192,7 @@ const colors = [
 
 const start = (str) => {
 
+  let touch = false;
   const style = document.head.appendChild(document.createElement("style"));
     style.innerText = `
     button {
@@ -277,7 +278,7 @@ const start = (str) => {
         const img = document.createElement("img");
         img.src = imgs.get(at(game.board, vec(x, y)));
         img.alt = "";
-        if (buttons.has(pos)) {
+        if (touch && buttons.has(pos)) {
           const command = buttons.get(pos);
           const button = gamePre.appendChild(document.createElement("button"));
           button.title = `${descriptions[command]} (${command}))`;
@@ -313,7 +314,7 @@ const start = (str) => {
   (() => {
   
     const layout = `
- w r y
+ w r y t
 asd
 z
 `.split("\n").map((x) => x.split(""));
@@ -323,7 +324,15 @@ z
       const tr = controlsEl.appendChild(document.createElement("tr"));
       for (const c of row) {
         const td = tr.appendChild(document.createElement("td"));
-        if (c !== " ") {
+        if (c === "t") {
+          const button = td.appendChild(document.createElement("button"));
+          button.style = "width: 200px; height: 48px;";
+          button.innerText = "Toggle particularly good touch controls!";
+          button.onclick = () => {
+            touch = !touch;
+            draw(game);
+          };
+        } else if (c !== " ") {
           const button = td.appendChild(document.createElement("button"));
           button.style = "width: 48px; height: 48px;";
           button.innerText = c.toUpperCase();
