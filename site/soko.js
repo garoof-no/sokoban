@@ -15,12 +15,24 @@ const neg = (v) => vec(-v.x, -v.y);
 
 const newGame = str => {
   const level = str.split("\n").map((x) => x.split(""));
+  const size = vec(Math.max(...level.map(row => row.length)), level.length);
+  for (const row of level) {
+    while (row.length < size.x) {
+      row.push(" ");
+    }
+  }
   return {
     level: level,
+    size: size,
     moves: "",
     redo: "",
     won: won(level)
   }
+};
+
+const levelStr = level => {
+  const str = level.map(row => row.join("").trimEnd()).join("\n");
+  return str.match(/^\n*([\s\S]*?)\n*$/)[1];
 };
 
 const url = (() => {
