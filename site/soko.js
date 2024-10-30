@@ -411,7 +411,7 @@ const play = (pack, sprites) => {
       gamePre.appendChild(elem("br"));
     });
     const a = elem("a");
-    a.href = `?level=${url.write(pack.levels[0].content)}&edit`;
+    a.href = `?level=${url.write(level.content)}&edit`;
     a.innerText = "Edit!";
     link.replaceChildren(a);
   };
@@ -473,8 +473,9 @@ z
     }
   })();
 
+  let level;
   const selectLevel = i => {
-    const level = pack.levels[i];
+    level = pack.levels[i];
     game = newGame(level.content);
     levelMeta.replaceChildren(...metaHtml(level.meta));
     draw();
