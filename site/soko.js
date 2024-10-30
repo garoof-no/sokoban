@@ -92,7 +92,7 @@ const levelpack = {
 };
 
 const metaHtml = (m) => {
-  const title = m.has("Title") ? m.get("Title")  : "Level pack";
+  const title = m.has("Title") ? m.get("Title")  : "untitled";
   const res = [elem("h2", {}, title)];
   if (m.has("Description")) {
     res.push(elem("p", {}, m.get("Description")));
