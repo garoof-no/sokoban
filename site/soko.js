@@ -317,13 +317,10 @@ const makeSprites = (img) => {
 
   const sprites = new Map(
     [
-      [" ", vec(0, 0)],
-      ["#", vec(1, 0)],
-      ["@", vec(0, 1)],
-      ["+", vec(0, 1)],
-      ["$", vec(1, 1)],
-      [".", vec(0, 2)],
-      ["*", vec(1, 2)]
+      [" ", vec(0, 0)], [".", vec(1, 0)],
+      ["$", vec(0, 1)], ["*", vec(1, 1)],
+      ["@", vec(0, 2)], ["+", vec(1, 2)],
+      ["#", vec(0, 3)], ["X", vec(1, 3)],
     ].map((a) => {
       ctx.drawImage(img, a[1].x * 16, a[1].y * 16, 16, 16, 0, 0, tileSize.x, tileSize.y);
       return [a[0], canvas.toDataURL()];
