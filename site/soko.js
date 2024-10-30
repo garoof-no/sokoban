@@ -88,6 +88,21 @@ const levelpack = {
       }
     }
     return res;
+  },
+  write: pack => {
+    let str = "";
+    for ([k, v] of pack.meta) {
+      str += `${k}: ${v}\n`;
+    }
+    str += "\n";
+    for (const level of pack.levels) {
+      str += `${level.content}\n`;
+      for (const [k, v] of level.meta) {
+        str += `${k}: ${v}\n`;
+      }
+      str += "\n";
+    }
+    return str;
   }
 };
 
@@ -340,11 +355,11 @@ const button = (tile) => elem("button", { className: "tile" }, img(tile));
 
 const tilemap = () => elem("pre", { style: "line-height: 0;" });
 
-
+let pack;
+let levelIdx = 0;
 let edit;
-const play = (pack, startlevel = 0) => {
-  
-  let levelIdx;
+
+const play = () => {
   let game;
   
   document.head.appendChild(elem(
@@ -363,9 +378,9 @@ const play = (pack, startlevel = 0) => {
   const solutionEl = gameEl.appendChild(elem("p"));
   const wonEl = gameEl.appendChild(elem("p"));
   const controlsEl = gameEl.appendChild(elem("table"));
-  const link = gameEl.appendChild(elem("p"));
   gameEl.appendChild(elem("hr"));
   const packMeta = gameEl.appendChild(elem("div"));
+  const link = gameEl.appendChild(elem("p"));
 
   const descriptions = {
     w: "Up",
@@ -407,7 +422,7 @@ const play = (pack, startlevel = 0) => {
       gamePre.appendChild(elem("br"));
     });
     link.replaceChildren(
-      elem("button", { onclick: () => edit(pack, levelIdx) }, "Edit!")
+      elem("button", { onclick: () => edit() }, "Edit!")
     );
   };
 
@@ -477,14 +492,13 @@ z
 
   packMeta.append(...packHtml(pack, selectLevel));
   document.onkeypress = event => perform(event.key.toLowerCase())();
-  selectLevel(startlevel);
+  selectLevel(levelIdx);
 };
 
-edit = (pack, startlevel = 0) => {
-  let levelIdx = null;
+edit = () => {
   let level = null;
   const save = () => {
-    if (levelIdx !== null) {
+    if (level !== null) {
       pack.levels[levelIdx].content = levelformat.write(level);
     }
   };
@@ -570,13 +584,13 @@ edit = (pack, startlevel = 0) => {
   };
 
   packMeta.append(...packHtml(pack, selectLevel));
-  selectLevel(startlevel);
+  selectLevel(levelIdx);
 };
 
 window.onload = () => {
 
   const levelsEl = document.querySelector("#levels");
-  let pack = levelpack.read(levelsEl.innerText);
+  pack = levelpack.read(levelsEl.innerText);
   levelsEl.remove();
   const img = document.querySelector("#sprites");
   img.remove()
