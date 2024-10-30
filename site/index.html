@@ -6,12 +6,14 @@
   <title>Sokoboko</title>
   <link rel="icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAkAAAAJCAYAAADgkQYQAAAAAXNSR0IArs4c6QAAAGFJREFUGJWNkFEKwCAMQx+yUwj7Ejxcvz3Gvr2g4DWyHztkc2yB0pCEBkpOCUBjryAAFTMB2mO8nMEFKLhYzGi9y43Wu4oZANt818U7wlL9Ch21PvgjNFc6/1WH/+ltckqcRpYkzQ6QhCcAAAAASUVORK5CYII=" sizes="any" type="image/png">
   <script>
+  
 const elem = (tagName, props, ...children) => {
   const el = Object.assign(document.createElement(tagName), props);
   el.replaceChildren(...children);
   return el;
 };
 let sprites;
+let spritesImg;
 
 const vecs = new Map();
 const vec = (x, y) => {
@@ -43,7 +45,7 @@ const levelformat = {
   },
   write: level =>
     trimmed(level.rows.map(row => row.join("").trimEnd()).join("\n"))
-}  
+};
 
 const newGame = str => {
   const level = levelformat.read(str);
@@ -113,6 +115,24 @@ const levelpack = {
   }
 };
 
+let pack;
+let levelIdx = 0;
+
+const htmlString = () => {
+  const levels = elem("pre", { id: "levels" }, levelpack.write(pack)).outerHTML;
+  return `<!DOCTYPE html>
+<html lang="en">
+${document.head.outerHTML}
+<body>
+  <h1>Sokoboko</h1>
+  <div id="game"></div>
+  ${spritesImg.outerHTML}
+  ${levels}
+</body>
+</html>
+`;
+};
+
 const metaHtml = (m) => {
   const title = m.has("Title") ? m.get("Title")  : "untitled";
   const res = [elem("h2", {}, title)];
@@ -132,6 +152,15 @@ const metaHtml = (m) => {
   return res;
 };
 
+const download = (filename, text) =>
+    elem(
+      "a",
+      {
+        href: `data:text/plain;charset=utf-8,${encodeURIComponent(text)}`,
+        download: filename
+      }
+    ).click();
+
 const packHtml = (pack, selectLevel) => {  
   const res = metaHtml(pack.meta);
   res.push(elem("h3", {}, `${pack.levels.length} levels`));
@@ -146,6 +175,11 @@ const packHtml = (pack, selectLevel) => {
     );
     ol.appendChild(elem("li", {}, button));
   });
+  res.push(elem(
+    "button",
+    { onclick: () => download("sokoboko.html", htmlString()) },
+    "💾"
+  ));
   return res;
 };
 
@@ -190,27 +224,27 @@ const url = (() => {
 })();
 
 const style = (bc, hc, ac) => `
-    button.tile {
-      padding: 0;
-      margin: 0;
-      width: ${tileSize.x}px;
-      height: ${tileSize.y}px;
-      display: inline-block; border-style: none;
-      background-color: ${bc};
-    }
-    button.key {
-      width: ${keySize.x}px;
-      height: ${keySize.y}px;
-    }
-    button.tile:hover {
-      background-color: ${hc};
-    }
-    button.tile:active, button.active {
-      background-color: ${ac};
-    }
-    button.tile img {
-      mix-blend-mode: multiply;
-    }`;
+button.tile {
+  padding: 0;
+  margin: 0;
+  width: ${tileSize.x}px;
+  height: ${tileSize.y}px;
+  display: inline-block; border-style: none;
+  background-color: ${bc};
+}
+button.key {
+  width: ${keySize.x}px;
+  height: ${keySize.y}px;
+}
+button.tile:hover {
+  background-color: ${hc};
+}
+button.tile:active, button.active {
+  background-color: ${ac};
+}
+button.tile img {
+  mix-blend-mode: multiply;
+}`;
 
 const at = (level, pos, notfound = "#") => {
   if (
@@ -362,23 +396,16 @@ const button = (tile) => elem("button", { className: "tile" }, img(tile));
 
 const tilemap = () => elem("pre", { style: "line-height: 0;" });
 
-let pack;
-let levelIdx = 0;
 let edit;
 
 const play = () => {
   let game;
   
-  document.head.appendChild(elem(
-    "style",
-    {},
-    style("#AAAAAA", "#888888", "#444444")
-  ));
-  
   let touch = false;
 
   const gameEl = document.querySelector("#game");
   gameEl.replaceChildren();
+  gameEl.appendChild(elem("style", {}, style("#AAAAAA", "#888888", "#444444")));
   const levelMeta = gameEl.appendChild(elem("div"));
   gameEl.appendChild(elem("hr"));
   const gamePre = gameEl.appendChild(tilemap());
@@ -509,10 +536,10 @@ edit = () => {
       pack.levels[levelIdx].content = levelformat.write(level);
     }
   };
-  document.head.appendChild(elem("style", {}, style("#FFFFFF", "#888888", "#444444")));
   
   const gameEl = document.querySelector("#game");
   gameEl.replaceChildren();
+  gameEl.appendChild(elem("style", {}, style("#FFFFFF", "#888888", "#444444")));
   const levelMeta  = gameEl.appendChild(elem("div"));
   gameEl.appendChild(elem("hr"));
   const palette = gameEl.appendChild(elem("p"));
@@ -532,6 +559,7 @@ edit = () => {
         const btn = gamePre.appendChild(button(tile));
         btn.onclick = () => {
           put(level, pos, selected);
+          save();
           draw();
         };
       });
@@ -541,6 +569,7 @@ edit = () => {
         level.rows.forEach(row => row.push(" "));
         level.size.x++;
         put(level, vec(x, y), selected);
+        save();
         draw();
       };
       gamePre.appendChild(elem("br"));
@@ -554,6 +583,7 @@ edit = () => {
         level.rows.push(new Array(level.size.x).fill(" "));;
         level.size.y++;
         put(level, vec(x, y), selected);
+        save();
         draw();
       };
     }
@@ -599,9 +629,9 @@ window.onload = () => {
   const levelsEl = document.querySelector("#levels");
   pack = levelpack.read(levelsEl.innerText);
   levelsEl.remove();
-  const img = document.querySelector("#sprites");
-  img.remove()
-  makeSprites(img);
+  spritesImg = document.querySelector("#sprites");
+  spritesImg.remove()
+  makeSprites(spritesImg);
 
   const params = new URLSearchParams(location.search);
   const urlLevel = params.get("level");
