@@ -167,29 +167,22 @@ const url = (() => {
   };
 })();
 
-const style = (bc, hc, ac) => `button {
+const style = (bc, hc, ac) => `
+    button.tile, button.square {
+      padding: 0;
+      margin: 0;
+      height: ${tileSize.x}px;
+      width: ${tileSize.y}px;
       display: inline-block; border-style: none;
       background-color: ${bc};
     }
-    button.tile {
-      padding: 0;
-      margin: 0;
-      height: ${tileSize.x}px;
-      width: ${tileSize.y}px;
-    }
-    button.square {
-      padding: 0;
-      margin: 0;
-      height: ${tileSize.x}px;
-      width: ${tileSize.y}px;
-    }
-    button:hover {
+    button.tile:hover, button.square:hover {
       background-color: ${hc};
     }
-    button:active, button.active {
+    button.tile:active, button.square:active, button.active {
       background-color: ${ac};
     }
-    button img {
+    button.tile img {
       mix-blend-mode: multiply;
     }`;
 
@@ -544,14 +537,15 @@ const edit = (pack, sprites) => {
   let buttons;
   buttons = [" ", "#", ".", "@", "+", "$", "*"].map(tile => {
     const btn = palette.appendChild(button(tile, sprites));
+    btn.className = "square";
     btn.onclick = () => {
-      buttons.forEach(b => (b.className = ""));
-      btn.className = "active";
+      buttons.forEach(b => (b.className = "tile"));
+      btn.className = "tile active";
       selected = tile;
     };
     return btn;
   });
-  buttons[0].className = "active";
+  buttons[0].className = "tile active";
   draw();
 };
 
