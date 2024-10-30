@@ -109,64 +109,6 @@ const packHtml = (pack) => {
   return res;
 };
 
-const levels = levelpack.read(
-`Title: Original 4
-Description: The first 4 original levels from Sokoban
-Author: Thinking Rabbit
-
-    #####
-    #   #
-    #$  #
-  ###  $##
-  #  $ $ #
-### # ## #   ######
-#   # ## #####  ..#
-# $  $          ..#
-##### ### #@##  ..#
-    #     #########
-    #######
-Title: 1
-
-############
-#..  #     ###
-#..  # $  $  #
-#..  #$####  #
-#..    @ ##  #
-#..  # #  $ ##
-###### ##$ $ #
-  # $  $ $ $ #
-  #    #     #
-  ############
-Title: 2
-
-        ########
-        #     @#
-        # $#$ ##
-        # $  $#
-        ##$ $ #
-######### $ # ###
-#....  ## $  $  #
-##...    $  $   #
-#....  ##########
-########
-Title: 3
-
-           ########
-           #  ....#
-############  ....#
-#    #  $ $   ....#
-# $$$#$  $ #  ....#
-#  $     $ #  ....#
-# $$ #$ $ $########
-#  $ #     #
-## #########
-#    #    ##
-#     $   ##
-#  $$#$$  @#
-#    #    ##
-###########
-Title: 4`);
-
 const url = (() => {
   const a = [" ", "#", ".", "@", "+", "$", "*", "\n"];
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
@@ -567,41 +509,28 @@ const edit = (str, sprites) => {
   draw();
 };
 
-const defaultLevel = `
-    #####
-    #   #
-    #$  #
-  ###  $##
-  #  $ $ #
-### # ## #   ######
-#   # ## #####  ..#
-# $  $          ..#
-##### ### #@##  ..#
-    #     #########
-    #######
-`;
-
 window.onload = () => {
 
+  const levelsEl = document.querySelector("#levels");
+  let pack = levelpack.read(levelsEl.innerText);
+  levelsEl.remove();
   const img = document.querySelector("#sprites");
   img.remove()
   const sprites = makeSprites(img);
 
-  let levelStr = defaultLevel;
   const params = new URLSearchParams(location.search);
   const urlLevel = params.get("level");
   if (urlLevel !== null) {
     try {
-      levelStr = url.read(urlLevel);
+      pack = levelpack.read(url.read(urlLevel));
     } catch (e) {
       console.error(e);
     }
   }
   if (params.has("edit")) {
-    edit(levelStr, sprites);
+    edit(pack.levels[0].content, sprites);
   } else {
-    play(levelStr, sprites);
+    play(pack.levels[0].content, sprites);
   }
-  
 };
 
