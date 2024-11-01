@@ -141,7 +141,7 @@ const metaHtml = (m) => {
   }
   let ul = null;
   for ([k, v] of m) {
-    if (k !== "Title" && k !== "Description") {
+    if (k !== "Title" && k !== "Description" && !k.startsWith("State.")) {
       if (ul === null) {
          ul = elem("ul", {});
          res.push(ul);
