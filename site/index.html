@@ -253,6 +253,13 @@ button.tile:active, button.active {
 button.tile img {
   mix-blend-mode: multiply;
 }
+pre.moves {
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.hidden {
+  display: none;
+}
 `;
 
 const at = (level, pos, notfound = "#") => {
@@ -421,8 +428,8 @@ const play = () => {
   const levelMeta = gameEl.appendChild(elem("div"));
   gameEl.appendChild(elem("hr"));
   const gamePre = gameEl.appendChild(tilemap());
+  const snapshotEl = gameEl.appendChild(elem("pre", { className: "moves" }));
   const solutionEl = gameEl.appendChild(elem("pre"));
-  solutionEl.style = "white-space: pre-wrap; word-break: break-all;";
   const wonEl = gameEl.appendChild(elem("p"));
   const controlsEl = gameEl.appendChild(elem("table"));
   gameEl.appendChild(elem("hr"));
@@ -440,7 +447,7 @@ const play = () => {
   let perform;
 
   const draw = () => {
-    solutionEl.innerText = game.moves === "" ? "..." : game.moves;
+    snapshotEl.innerText = game.moves === "" ? "..." : game.moves;
     wonEl.innerText = game.won ? "Yay!" : "...";
 
     gamePre.replaceChildren();
@@ -486,6 +493,8 @@ const play = () => {
         meta.set("State.Snapshot", game.moves);
         if (game.won) {
           meta.set("State.Solution", game.moves);
+          solutionEl.className = "moves";
+          solutionEl.innerText = `Solution:\n${game.moves}`
           packMeta.replaceChildren(...packHtml(pack, selectLevel));
         }
         draw();
@@ -540,6 +549,13 @@ z
       }
     }
     levelMeta.replaceChildren(...metaHtml(level.meta));
+    solutionEl.replaceChildren();
+    if (level.meta.has("State.Solution")) {
+      solutionEl.className = "moves";
+      solutionEl.innerText = `Solution:\n${level.meta.get("State.Solution")}`
+    } else {
+      solutionEl.className = "hidden";
+    }
     draw();
   };
 
