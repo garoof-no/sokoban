@@ -435,6 +435,33 @@ const play = () => {
   gameEl.appendChild(elem("hr"));
   const packMeta = gameEl.appendChild(elem("div"));
 
+  let draw;
+
+  const showSolution = () => {
+    const meta = pack.levels[levelIdx].meta;
+    if (meta.has("State.Solution")) {
+      const solution = meta.get("State.Solution");
+      solutionEl.className = "moves";
+      solutionEl.innerText = `Solution:\n${solution}\n`
+      solutionEl.appendChild(elem(
+        "button",
+        {
+          onclick: () => {
+            restart(game);
+            for (const c of solution) {
+              move(game, c);              
+            }
+            draw();
+          }
+        },
+        "Load solution"
+      ));
+      
+    } else {
+      solutionEl.className = "hidden";
+    }
+  };
+
   const descriptions = {
     w: "Up",
     a: "Left",
@@ -444,39 +471,8 @@ const play = () => {
     y: "Redo",
     r: "Restart"
   };
-  let perform;
 
-  const draw = () => {
-    snapshotEl.innerText = game.moves === "" ? "..." : game.moves;
-    wonEl.innerText = game.won ? "Yay!" : "...";
-
-    gamePre.replaceChildren();
-    const player = playerPos(game.level);
-    const buttons = new Map(
-      [
-        [add(player, vec(0, -1)), "w"],
-        [add(player, vec(-1, 0)), "a"],
-        [add(player, vec(0, 1)), "s"],
-        [add(player, vec(1, 0)), "d"]
-      ]
-    );
-    game.level.rows.forEach((row, y) => {
-      row.forEach((tile, x) => {
-        const pos = vec(x, y);
-        if (touch && buttons.has(pos)) {
-          const command = buttons.get(pos);
-          const btn = gamePre.appendChild(button(tile));
-          btn.title = `${descriptions[command]} (${command})`;
-          btn.onclick = perform(command);
-        } else {
-          gamePre.appendChild(img(tile));
-        }
-      });
-      gamePre.appendChild(elem("br"));
-    });
-  };
-
-  perform = (() => {
+  const perform = (() => {
     const commands = new Map([
       ["w", () => move(game, "u")],
       ["a", () => move(game, "l")],
@@ -493,8 +489,7 @@ const play = () => {
         meta.set("State.Snapshot", game.moves);
         if (game.won) {
           meta.set("State.Solution", game.moves);
-          solutionEl.className = "moves";
-          solutionEl.innerText = `Solution:\n${game.moves}`
+          showSolution();
           packMeta.replaceChildren(...packHtml(pack, selectLevel));
         }
         draw();
@@ -550,13 +545,38 @@ z
     }
     levelMeta.replaceChildren(...metaHtml(level.meta));
     solutionEl.replaceChildren();
-    if (level.meta.has("State.Solution")) {
-      solutionEl.className = "moves";
-      solutionEl.innerText = `Solution:\n${level.meta.get("State.Solution")}`
-    } else {
-      solutionEl.className = "hidden";
-    }
     draw();
+  };
+
+  draw = () => {
+    snapshotEl.innerText = game.moves === "" ? "..." : game.moves;
+    wonEl.innerText = game.won ? "Yay!" : "...";
+
+    gamePre.replaceChildren();
+    const player = playerPos(game.level);
+    const buttons = new Map(
+      [
+        [add(player, vec(0, -1)), "w"],
+        [add(player, vec(-1, 0)), "a"],
+        [add(player, vec(0, 1)), "s"],
+        [add(player, vec(1, 0)), "d"]
+      ]
+    );
+    game.level.rows.forEach((row, y) => {
+      row.forEach((tile, x) => {
+        const pos = vec(x, y);
+        if (touch && buttons.has(pos)) {
+          const command = buttons.get(pos);
+          const btn = gamePre.appendChild(button(tile));
+          btn.title = `${descriptions[command]} (${command})`;
+          btn.onclick = perform(command);
+        } else {
+          gamePre.appendChild(img(tile));
+        }
+      });
+      gamePre.appendChild(elem("br"));
+      showSolution();
+    });
   };
 
   packMeta.replaceChildren(...packHtml(pack, selectLevel));
