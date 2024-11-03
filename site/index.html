@@ -35,9 +35,38 @@ const neg = (v) => vec(-v.x, -v.y);
 
 const trimmed = (str) => str.match(/^\n*([\s\S]*?)\n*$/)[1];
 
+const player = ["@", "+"];
+const box = ["$", "*"];
+const playerchars = new Set(player);
+const emptychars = new Set(" -_");
+const allchars = new Set(" -_#.@+$*");
+
 const levelformat = {
   read: str => {
-    const rows = trimmed(str).split("\n").map((x) => x.trimEnd().split(""));
+    const rows = [];
+    let playerfound = false;
+    for (const rowstr of trimmed(str).split("\n")) {
+      const row = [];
+      rows.push(row);
+      for (const c of rowstr.trimEnd()) {
+        if (playerchars.has(c)) {
+          if (playerfound) {
+            console.error("too many players, replacing with empty space");
+            row.push(" ");
+          } else {
+            playerfound = true;
+            row.push(c);
+          }
+        } else if (emptychars.has(c)) {
+          row.push(" ");
+        } else if (!allchars.has(c)) {
+          console.error(`unknown char '${c}, replacing with empty space`);
+          row.push(" ");
+        } else {
+          row.push(c);
+        }
+      }
+    }
     const size = vec(Math.max(...rows.map(row => row.length)), rows.length);
     for (const row of rows) {
       while (row.length < size.x) {
@@ -46,8 +75,14 @@ const levelformat = {
     }
     return { rows: rows, size: size };
   },
-  write: level =>
-    trimmed(level.rows.map(row => row.join("").trimEnd()).join("\n"))
+  write: level => {
+    const res = [];
+    for (const row of level.rows) {
+      const rowStr = row.join("").trimEnd();
+      res.push(rowStr === "" ? "-" : rowStr);
+    }
+    return trimmed(res.join("\n"));
+  }
 };
 
 const newGame = str => {
@@ -64,7 +99,6 @@ const newGame = str => {
 const levelpack = {
   read: str => {
     const res = { meta: new Map(), levels: [] };
-
     let current = null;
 
     const kv = (key, value) => {
@@ -241,9 +275,6 @@ const playerPos = (game) => {
   }
   throw "no player in level? :(";
 };
-
-const player = ["@", "+"];
-const box = ["$", "*"];
 
 const step = (game, type, pos, dir) => {
   const tile = at(game, pos);
@@ -432,7 +463,11 @@ const play = (sprites, pack, levelIdx = firstUnsolved(pack)) => {
     draw(game, game.touched);
     game.touched = new Set();
     const moves = game.moves;
-    level.meta.set("State.Snapshot", moves);
+    if (moves === "") {
+      level.meta.delete("State.Snapshot", moves);
+    } else {
+      level.meta.set("State.Snapshot", moves);
+    }
     snapshotEl.innerText = game.moves === "" ? "..." : moves;
     if (won(game)) {
       level.meta.set("State.Solution", game.moves);
@@ -527,14 +562,9 @@ window.onload = () => {
   <h1>Sokoboko</h1>
   <div id="game"></div>
   <img id="sprites" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAABACAYAAAB7jnWuAAAAAXNSR0IArs4c6QAAAkRJREFUaIHtmLFuwjAQhi9R3gCpU9duOANrFyamqM+BssIrdCsrYu0LdGJi4gkYcB+BCYlXSDpdcIzPvjhXsuSXkEKc+P/OdxccEq11DQMqHdJ8BBgBRoARYAQAAMgkJlFKRd2ntZYB0FpH3zt4CkYAsgZWh2nr+2bx+xwANC7yCgAA9ucUirxqzkuDtFKwOkwbY1tFXrVAxAFM8yKvYH9OH47xuyREawX259RpbB6bMBJKtNa1vfSY99CxRD00RWhHZkZvm3PE7aIGwDe5HTnHmNtFwYS6UkDBxnRRgm9G9gAWHjf/3Dqy72+tAFL6zH2K6aJksalrpDGjQFMfParPfqBpQ1uuVQCQfxQn1Nvxs36MSIBnafD9gBfAV1yxhccGUErBuiydRlxzTgDBFCCE+VmXJcucEwBrW84x9N1rQ6zLEr622zYAXtRnj++DoJSieShKJLaPUZiermK3oQlow/YJ4AEgNpKQqAAy6iIA91KjqFrpCu/tAmpZKbCYAETejilxAhAD8EXrklKK/n/ANZmvyvs8OzKcwCwe14Sh8VgNvh9IPt+gF8DrywQAAGa7Y6f7Tsv5HQAncelyvYFv3BQXAs0BBHZEpqk5Mcd8tjvKbMm4ELY5gEANfPzcO8JlEBpLvt8nLYBQzu1xjpEPTHxXbKfDZ/4vAJQR1SHZ5Xp7OOk6R43POqE5AACgU845cnXCaTl/TgrsnIdaVBSAKjgfhNhzIFTt1DUizwGOOQXROwVdzO1rTsu5XA10+Tk2r/0DrneQqwh5DMcAAAAASUVORK5CYII=" alt="">
-  <pre id="levels">
-Title: Original
+  <pre id="levels">Title: Original
 Description: The 50 original levels from Sokoban.
 Author: Thinking Rabbit
-
-#####
-#@$.#
-#####
 
     #####
     #   #
