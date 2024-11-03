@@ -422,6 +422,40 @@ const firstUnsolved = pack => {
   return pack.levels.length - 1;
 };
 
+const pushMoves = str => str.replace(/[^ULRD]/g, "").length;
+
+const addSolution = (meta, str) => {
+  let moves = str;
+  let pushes = str;
+  let mp = pushMoves(str);
+  for (const [k, v] of meta) {
+    if (k === "State.Solution" || k.startsWith("State.Solution.")) {
+      if (v.length <= moves.length) {
+        moves = v;
+      }
+      const vp = pushMoves(v);
+      if (vp < mp || (vp === mp && v.length < pushes.length)) {
+        pushes = v;
+        mp = vp;
+      }
+    }
+  }
+  meta.set("State.Solution", str);
+  
+  meta.delete("State.Solution.Best");
+  meta.delete("State.Solution.FewestMoves");
+  meta.delete("State.Solution.FewestPushes");
+  if (str === moves && moves === pushes ) {
+    return;
+  }
+  if (moves === pushes) {
+    meta.set("State.Solution.Best", moves);
+    return;
+  }
+  meta.set("State.Solution.FewestMoves", moves);
+  meta.set("State.Solution.FewestPushes", pushes);
+};
+
 const play = (sprites, pack, levelIdx = firstUnsolved(pack)) => {
   const level = pack.levels[levelIdx];
   const game = newGame(level.content);
@@ -489,22 +523,36 @@ const play = (sprites, pack, levelIdx = firstUnsolved(pack)) => {
     }
     snapshotEl.innerText = game.moves === "" ? "..." : moves;
     if (won(game)) {
-      level.meta.set("State.Solution", game.moves);
+      addSolution(level.meta, game.moves);
       refreshSolution();
     }
     levelButtons[levelIdx].innerText = levelStr(pack, levelIdx);
   };
   refreshSolution = () => {
+    solutionEl.replaceChildren();
     if (!level.meta.has("State.Solution")) {
-      solutionEl.replaceChildren();
       return;
     }
-    const moves = level.meta.get("State.Solution");      
-    solutionEl.innerText = `Solution:\n${moves}\n`;
-    solutionEl.append(elem(
-      "button",
-      { onclick: () => { loadSnapshot(game, moves); refresh(); }},
-      "Load solution"));
+    
+    const moves = level.meta.get("State.Solution");
+    solutionEl.append(
+      `Solution:\n${game.moves}\n`,
+      elem(
+        "button",
+        { onclick: () => { loadSnapshot(game, moves); refresh(); }},
+        "Load solution"),
+      "\n");
+    for (const [k, v] of level.meta) {
+      if (k.startsWith("State.Solution.")) {
+        solutionEl.append(
+          `${k.substring("State.Solution.".length)}:\n${v}\n`,
+          elem(
+            "button",
+            { onclick: () => { loadSnapshot(game, v); refresh(); }},
+          "Load solution"),
+        "\n");
+      }
+    }
   };
 
   const perform = (() => {
