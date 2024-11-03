@@ -6,9 +6,9 @@
   <title>Sokoboko</title>
   <link rel="icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAkAAAAJCAYAAADgkQYQAAAAAXNSR0IArs4c6QAAAGFJREFUGJWNkFEKwCAMQx+yUwj7Ejxcvz3Gvr2g4DWyHztkc2yB0pCEBkpOCUBjryAAFTMB2mO8nMEFKLhYzGi9y43Wu4oZANt818U7wlL9Ch21PvgjNFc6/1WH/+ltckqcRpYkzQ6QhCcAAAAASUVORK5CYII=" sizes="any" type="image/png">
   <style>
-body { background-color: #D3D3D3; }
-button.key { width: 48px; height: 48px; }
-pre.moves { white-space: pre-wrap; word-break: break-all; }
+body { background-color: #D3D3D3; max-width: 50rem; margin: 1rem auto 0 auto; }
+.key { width: 48px; height: 48px; }
+.moves { white-space: pre-wrap; word-break: break-all; }
   </style>
   <script>
 const vecs = new Map();
@@ -192,14 +192,17 @@ const download = (filename, text) => {
     elem("a", { href: href, download: filename }).click();
 };
 
-const levelStr = pack => idx => {
+const levelStr = (pack, idx) => {
   const level = pack.levels[idx];
   const n = idx + 1;
   const title = level.meta.get("Title");
   const titleStr =
     level.meta.has("Title") && title !== `${n}` ? `: ${title}` : "";
-  const solved = level.meta.has("State.Solution") ? " :)" : "";
-  return `Level ${n}${titleStr}${solved}`
+  const progress =
+    level.meta.has("State.Solution") ? " ★"
+    : level.meta.has("State.Snapshot") ? " 🐾"
+    : "";
+  return `Level ${n}${titleStr}${progress}`
 };
 
 const url = (() => {
@@ -408,7 +411,6 @@ const play = (sprites, pack, levelIdx = firstUnsolved(pack)) => {
   if (level.meta.has("State.Snapshot")) {
     loadSnapshot(game, level.meta.get("State.Snapshot"));
   }
-  const lvlStr = levelStr(pack);
 
   const gameEl = document.querySelector("#game");
   gameEl.replaceChildren(...metaHtml(level.meta), elem("hr"));
@@ -429,8 +431,8 @@ const play = (sprites, pack, levelIdx = firstUnsolved(pack)) => {
       elem(
         "button",
         { onclick: () => play(sprites, pack, i) },
-        lvlStr(i)));
-  gameEl.append(elem("p", {}, ...levelButtons));
+        levelStr(pack, i)));
+  gameEl.append(...levelButtons);
 
   gameEl.append(
     elem("p", {},
@@ -471,9 +473,9 @@ const play = (sprites, pack, levelIdx = firstUnsolved(pack)) => {
     snapshotEl.innerText = game.moves === "" ? "..." : moves;
     if (won(game)) {
       level.meta.set("State.Solution", game.moves);
-      levelButtons[levelIdx].innerText = lvlStr(levelIdx);
       refreshSolution();
     }
+    levelButtons[levelIdx].innerText = levelStr(pack, levelIdx);
   };
   refreshSolution = () => {
     if (!level.meta.has("State.Solution")) {
@@ -541,13 +543,10 @@ z
 };
 
 window.onload = () => {
-
   const sprites = document.querySelector("#sprites");
   sprites.remove()
-
   const levelsEl = document.querySelector("#levels");  
   levelsEl.remove();
-
   const params = new URLSearchParams(location.search);
   const urlLevel = params.get("level");
   const pack =
