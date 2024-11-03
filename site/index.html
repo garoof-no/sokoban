@@ -485,17 +485,29 @@ const play = (sprites, pack, levelIdx = firstUnsolved(pack)) => {
           levelStr(pack, i)));
   gameEl.append(...levelButtons);
 
-  gameEl.append(
-    elem("p", {},
-      elem(
-        "button",
-        { onclick: () => download("sokoboko.html", htmlString(sprites, pack)) },
-        "💾 .HTML"
+  const pathname = decodeURI(window.location.pathname);
+  const segment = pathname.substring(pathname.lastIndexOf("/") + 1);
+  const dot = segment.lastIndexOf(".");
+  const suggestion = dot > 0 ? segment.substring(0, dot) : "sokoboko";
+  const filename = suggestion === "index" ? "sokoboko" : suggestion;
+  const saveP =  gameEl.appendChild(elem("p", {}, "Save as "));
+  const input = saveP.appendChild(elem("input", { defaultValue: filename }));
+  saveP.append(
+    elem(
+      "button",
+        {
+          onclick: () =>
+            download(`${input.value}.html`, htmlString(sprites, pack))
+        },
+        ".HTML 💾"
       ),
       elem(
         "button",
-        { onclick: () => download("sokoboko.txt", levelpack.write(pack)) },
-        "💾 .TXT")));
+        {
+          onclick: () =>
+            download(`${input.value}.txt`, levelpack.write(pack))
+        },
+        ".TXT 💾"));
   const loadTxt = elem(
     "input",
     {
