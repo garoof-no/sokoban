@@ -33,7 +33,7 @@ const elem = (tagName, props, ...children) => {
 const add = (a, b) => vec(a.x + b.x, a.y + b.y);
 const neg = (v) => vec(-v.x, -v.y);
 
-const trimmed = (str) => str.match(/^\n*([\s\S]*?)\n*$/)[1];
+const trimmed = (str) => str.match(/^(\s*\n)?([\s\S]*?)\s*$/)[2];
 
 const player = ["@", "+"];
 const box = ["$", "*"];
@@ -246,6 +246,23 @@ const url = (() => {
   };
 })();
 
+const urlLevelpack = (params) => {
+  if (!params.has("level")) {
+    return null;
+  }
+  const pack = levelpack.read("");
+  const str = trimmed(url.read(params.get("level")));
+  const level = { content: str, meta: new Map() };
+  pack.levels.push(level);
+  for (const [k, v] of params) {
+    if (k !== "level") {
+      pack.meta.set(k, v);
+      level.meta.set(k, v);
+    }
+  }
+  return pack;
+};
+
 const at = (game, pos, notfound = "#") => {
   const level = game.level;
   if (
@@ -427,11 +444,11 @@ const play = (sprites, pack, levelIdx = firstUnsolved(pack)) => {
   const controlsEl = gameEl.appendChild(elem("table"));
   gameEl.append(elem("hr"), ...metaHtml(pack.meta));
   const levelButtons = [...new Array(pack.levels.length).keys()]
-    .map(i =>
-      elem(
-        "button",
-        { onclick: () => play(sprites, pack, i) },
-        levelStr(pack, i)));
+      .map(i =>
+        elem(
+          "button",
+          { onclick: () => play(sprites, pack, i) },
+          levelStr(pack, i)));
   gameEl.append(...levelButtons);
 
   gameEl.append(
@@ -483,7 +500,7 @@ const play = (sprites, pack, levelIdx = firstUnsolved(pack)) => {
       return;
     }
     const moves = level.meta.get("State.Solution");      
-    solutionEl.innerText = `Solution:\n ${moves}`;
+    solutionEl.innerText = `Solution:\n${moves}\n`;
     solutionEl.append(elem(
       "button",
       { onclick: () => { loadSnapshot(game, moves); refresh(); }},
@@ -547,12 +564,8 @@ window.onload = () => {
   sprites.remove()
   const levelsEl = document.querySelector("#levels");  
   levelsEl.remove();
-  const params = new URLSearchParams(location.search);
-  const urlLevel = params.get("level");
-  const pack =
-    (urlLevel === null)
-    ? levelpack.read(levelsEl.innerText)
-    : levelpack.read(url.read(urlLevel));  
+  const upack = urlLevelpack(new URLSearchParams(location.search));
+  const pack = (upack !== null) ? upack : levelpack.read(levelsEl.innerText);
   play(sprites, pack);
 };
   </script>
