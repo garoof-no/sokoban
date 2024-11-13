@@ -19,19 +19,17 @@ const vec = (x, y) => {
   }
   return vecs.get(key);
 };
+const add = (a, b) => vec(a.x + b.x, a.y + b.y);
+const neg = (v) => vec(-v.x, -v.y);
 
 const spriteSize = vec(16, 16);
 const tileSize = vec(32, 32);
-const keySize = vec(48, 48);
 
 const elem = (tagName, props, ...children) => {
   const el = Object.assign(document.createElement(tagName), props);
   el.replaceChildren(...children);
   return el;
 };
-
-const add = (a, b) => vec(a.x + b.x, a.y + b.y);
-const neg = (v) => vec(-v.x, -v.y);
 
 const trimmed = (str) => str.match(/^(\s*\n)?([\s\S]*?)\s*$/)[2];
 
@@ -160,8 +158,10 @@ const htmlString = (sprites, pack) => {
 ${document.head.outerHTML}
 <body>
   <h1>Sokoboko</h1>
-  <div id="game"></div>
+  <div id="game">If you're seeing this then probably JavaScript is not doing its thing?</div>
   ${sprites.outerHTML}
+  <hr>
+  ${document.querySelector("#instructions").outerHTML}
   ${levels}
 </body>
 </html>
@@ -632,8 +632,23 @@ window.onload = () => {
 </head>
 <body>
   <h1>Sokoboko</h1>
-  <div id="game"></div>
+  <div id="game">If you're seeing this then probably JavaScript is not doing its thing?</div>
   <img id="sprites" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAABACAYAAAB7jnWuAAAAAXNSR0IArs4c6QAAAkRJREFUaIHtmLFuwjAQhi9R3gCpU9duOANrFyamqM+BssIrdCsrYu0LdGJi4gkYcB+BCYlXSDpdcIzPvjhXsuSXkEKc+P/OdxccEq11DQMqHdJ8BBgBRoARYAQAAMgkJlFKRd2ntZYB0FpH3zt4CkYAsgZWh2nr+2bx+xwANC7yCgAA9ucUirxqzkuDtFKwOkwbY1tFXrVAxAFM8yKvYH9OH47xuyREawX259RpbB6bMBJKtNa1vfSY99CxRD00RWhHZkZvm3PE7aIGwDe5HTnHmNtFwYS6UkDBxnRRgm9G9gAWHjf/3Dqy72+tAFL6zH2K6aJksalrpDGjQFMfParPfqBpQ1uuVQCQfxQn1Nvxs36MSIBnafD9gBfAV1yxhccGUErBuiydRlxzTgDBFCCE+VmXJcucEwBrW84x9N1rQ6zLEr622zYAXtRnj++DoJSieShKJLaPUZiermK3oQlow/YJ4AEgNpKQqAAy6iIA91KjqFrpCu/tAmpZKbCYAETejilxAhAD8EXrklKK/n/ANZmvyvs8OzKcwCwe14Sh8VgNvh9IPt+gF8DrywQAAGa7Y6f7Tsv5HQAncelyvYFv3BQXAs0BBHZEpqk5Mcd8tjvKbMm4ELY5gEANfPzcO8JlEBpLvt8nLYBQzu1xjpEPTHxXbKfDZ/4vAJQR1SHZ5Xp7OOk6R43POqE5AACgU845cnXCaTl/TgrsnIdaVBSAKjgfhNhzIFTt1DUizwGOOQXROwVdzO1rTsu5XA10+Tk2r/0DrneQqwh5DMcAAAAASUVORK5CYII=" alt="">
+  <hr>
+  <div id="instructions">
+    <p>Hi hello can play Sokoban.</p>
+    <p>
+      You can save your progress along with the game and the levels as a .HTML file, or save your progress along with the levels as a .TXT.
+      To load a HTML file you, uh, open it in your browser.
+      Levels/progress stored as .TXT can be loaded with the "Load .TXT" file input thing above (dragging a file onto that tends to work).
+    </p>
+    <p>
+      Loading a .TXT can be used to load your previously saved progress or to load a level pack with different levels (which can then be saved again as e.g. a new .HTML file).
+      .TXT loading supports normal ASCII Sokoban levels, but I'm not sure about the "level pack" format.
+      It seems to work fine for the levels on <a href="https://www.sourcecode.se/sokoban/levels.php">this Sokoban level page</a>,
+      but others do things differently and might work less well. Okay.
+    </p>
+  </div>
   <pre id="levels">Title: Original
 Description: The 50 original levels from Sokoban.
 Author: Thinking Rabbit
