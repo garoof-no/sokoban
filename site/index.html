@@ -96,21 +96,32 @@ const newGame = str => {
 
 const levelpack = {
   read: str => {
-    const res = { meta: new Map(), levels: [] };
+    const res = { meta: new Map(), text: null, levels: [] };
     let current = null;
 
-    const kv = (key, value) => {
+    const notrow = (str) => {
       const o = current || res;
-      if (o.meta.has(key)) {
-        console.error(`not adding duplicate key: ${key} => ${value}`);
+      const i = str.indexOf(":");
+      if (i >= 0) {
+        const key = str.substring(0, i);
+        const value = str.substring(i + 1).trim();
+        if (o.meta.has(key)) {
+          console.error(`not adding duplicate key: ${key} => ${value}`);
+        } else {
+          o.meta.set(key, value);
+        }
       } else {
-      o.meta.set(key, value);
+        if (o.text === null) {
+          o.text = str;
+        } else {
+          o.text += `\n${str}`;
+        }
       }
     };
 
     const row = (str) => {
       if (current === null || current.meta.size > 0) {
-        current = { meta: new Map(), content: "" };
+        current = { meta: new Map(), text: null, content: "" };
         res.levels.push(current);
       }
       if (current.content !== "") {
@@ -124,12 +135,7 @@ const levelpack = {
       if (l === "") {
         current = null;
       } else {
-        const i = l.indexOf(":");
-        if (i >= 0) {
-          kv(l.substring(0, i), l.substring(i + 1).trim());
-        } else {
-          row(l);
-        }
+        (allchars.has(l[0]) ? row : notrow)(l);
       }
     }
     return res;
@@ -139,11 +145,17 @@ const levelpack = {
     for ([k, v] of pack.meta) {
       str += `${k}: ${v}\n`;
     }
+    if (pack.text !== null) {
+      str += pack.text;
+    }
     str += "\n";
     for (const level of pack.levels) {
       str += `${level.content}\n`;
       for (const [k, v] of level.meta) {
         str += `${k}: ${v}\n`;
+      }
+      if (level.text !== null) {
+        str += level.text;
       }
       str += "\n";
     }
@@ -168,7 +180,8 @@ ${document.head.outerHTML}
 `;
 };
 
-const metaHtml = (m) => {
+const metaHtml = (o) => {
+  const m = o.meta;
   const title = m.has("Title") ? m.get("Title")  : "untitled";
   const res = [elem("h2", {}, title)];
   if (m.has("Description")) {
@@ -183,6 +196,9 @@ const metaHtml = (m) => {
       }
       ul.appendChild(elem("li", {}, `${k}: ${v}`));
     }
+  }
+  if (o.text !== null) {
+    res.push(elem("p", {}, o.text));
   }
   return res;
 };
@@ -464,7 +480,7 @@ const play = (sprites, pack, levelIdx = firstUnsolved(pack)) => {
   }
 
   const gameEl = document.querySelector("#game");
-  gameEl.replaceChildren(...metaHtml(level.meta), elem("hr"));
+  gameEl.replaceChildren(...metaHtml(level), elem("hr"));
   const canvas = gameEl.appendChild(elem("canvas"));;
   const ctx = canvas.getContext("2d");;
   canvas.width = game.level.size.x * tileSize.x;
@@ -476,7 +492,7 @@ const play = (sprites, pack, levelIdx = firstUnsolved(pack)) => {
   const solutionEl = gameEl.appendChild(elem("pre", { className: "moves" }));
   const wonEl = gameEl.appendChild(elem("p"));
   const controlsEl = gameEl.appendChild(elem("table"));
-  gameEl.append(elem("hr"), ...metaHtml(pack.meta));
+  gameEl.append(elem("hr"), ...metaHtml(pack));
   const levelButtons = [...new Array(pack.levels.length).keys()]
       .map(i =>
         elem(
@@ -645,8 +661,8 @@ window.onload = () => {
     <p>
       Loading a .TXT can be used to load your previously saved progress or to load a level pack with different levels (which can then be saved again as e.g. a new .HTML file).
       .TXT loading supports normal ASCII Sokoban levels, but I'm not sure about the "level pack" format.
-      It seems to work fine for the levels on <a href="https://www.sourcecode.se/sokoban/levels.php">this Sokoban level page</a>,
-      but others do things differently and might work less well. Okay.
+      Seems to mostly work for the .TXT level packs I've trie, but I've seen some metadata/text/description stuff that's kind of weird and is only <em>kind of handled</em> by this stuff.
+      Oh well/okay.
     </p>
   </div>
   <pre id="levels">Title: Original
