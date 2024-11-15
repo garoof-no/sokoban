@@ -96,32 +96,27 @@ const newGame = str => {
 
 const levelpack = {
   read: str => {
-    const res = { meta: new Map(), text: null, levels: [] };
+    const res = { state: new Map(), title: "untitled pack", text: "", levels: [] };
     let current = null;
 
     const notrow = (str) => {
       const o = current || res;
-      const i = str.indexOf(":");
-      if (i >= 0) {
-        const key = str.substring(0, i);
-        const value = str.substring(i + 1).trim();
-        if (o.meta.has(key)) {
-          console.error(`not adding duplicate key: ${key} => ${value}`);
-        } else {
-          o.meta.set(key, value);
-        }
+      if (str.toLowerCase().startsWith("title:")) {
+        o.title = str.substring("title:".length).trim();
+        o.text += `${str}\n`;
+      } else if (str.startsWith("State.") && str.indexOf(":") > -1) {
+        const idx = str.indexOf(":");
+        const key = str.substring("State.".length, idx);
+        const value = str.substring(idx + 1).trim();
+        o.state.set(key, value);
       } else {
-        if (o.text === null) {
-          o.text = str;
-        } else {
-          o.text += `\n${str}`;
-        }
+        o.text += `${str}\n`;
       }
     };
 
     const row = (str) => {
-      if (current === null || current.meta.size > 0) {
-        current = { meta: new Map(), text: null, content: "" };
+      if (current === null || current.state.size > 0 || current.text !== "") {
+        current = { state: new Map(), title: "untitled level", text: "", content: "" };
         res.levels.push(current);
       }
       if (current.content !== "") {
@@ -132,32 +127,26 @@ const levelpack = {
   
     for (const line of str.split("\n")) {
       const l = line.trimEnd();
-      if (l === "") {
-        current = null;
-      } else {
-        (allchars.has(l[0]) ? row : notrow)(l);
-      }
+      (l !== "" && allchars.has(l[0]) ? row : notrow)(l);
     }
     return res;
   },
   write: pack => {
     let str = "";
-    for ([k, v] of pack.meta) {
-      str += `${k}: ${v}\n`;
-    }
-    if (pack.text !== null) {
-      str += pack.text;
-    }
-    str += "\n";
-    for (const level of pack.levels) {
-      str += `${level.content}\n`;
-      for (const [k, v] of level.meta) {
-        str += `${k}: ${v}\n`;
+    const writeMeta = o => {  
+      for ([k, v] of o.state) {
+        str += `State.${k}: ${v}\n`;
       }
-      if (level.text !== null) {
-        str += level.text;
-      }
+      str += o.text.trimEnd();
       str += "\n";
+    };
+
+    writeMeta(pack);
+    
+    for (const level of pack.levels) {
+      str += "\n";
+      str += `${level.content}\n`;
+      writeMeta(level);
     }
     return str;
   }
@@ -180,28 +169,7 @@ ${document.head.outerHTML}
 `;
 };
 
-const metaHtml = (o) => {
-  const m = o.meta;
-  const title = m.has("Title") ? m.get("Title")  : "untitled";
-  const res = [elem("h2", {}, title)];
-  if (m.has("Description")) {
-    res.push(elem("p", {}, m.get("Description")));
-  }
-  let ul = null;
-  for ([k, v] of m) {
-    if (k !== "Title" && k !== "Description" && !k.startsWith("State.")) {
-      if (ul === null) {
-         ul = elem("ul", {});
-         res.push(ul);
-      }
-      ul.appendChild(elem("li", {}, `${k}: ${v}`));
-    }
-  }
-  if (o.text !== null) {
-    res.push(elem("p", {}, o.text));
-  }
-  return res;
-};
+const metaHtml = (o) => [elem("h2", {}, o.title), elem("pre", {}, o.text)];
 
 const download = (filename, text) => {
     const href = `data:text/plain;charset=utf-8,${encodeURIComponent(text)}`;
@@ -211,14 +179,12 @@ const download = (filename, text) => {
 const levelStr = (pack, idx) => {
   const level = pack.levels[idx];
   const n = idx + 1;
-  const title = level.meta.get("Title");
-  const titleStr =
-    level.meta.has("Title") && title !== `${n}` ? `: ${title}` : "";
+  const title = level.title !== `${n}` ? `: ${level.title}` : "";
   const progress =
-    level.meta.has("State.Solution") ? " ★"
-    : level.meta.has("State.Snapshot") ? " 🐾"
+    level.state.has("Solution") ? " ★"
+    : level.state.has("Snapshot") ? " 🐾"
     : "";
-  return `Level ${n}${titleStr}${progress}`
+  return `Level ${n}${title}${progress}`
 };
 
 const url = (() => {
@@ -271,9 +237,9 @@ const urlLevelpack = (params) => {
   const level = { content: str, meta: new Map() };
   pack.levels.push(level);
   for (const [k, v] of params) {
-    if (k !== "level") {
-      pack.meta.set(k, v);
-      level.meta.set(k, v);
+    if (k.toLowerCase() == "title") {
+      pack.title = v;
+      level.title = v;
     }
   }
   return pack;
@@ -431,7 +397,7 @@ const drawer = (ctx, sprites) => {
 
 const firstUnsolved = pack => {
   for (let i = 0; i < pack.levels.length; i++) {
-    if (!pack.levels[i].meta.has("State.Solution")) {
+    if (!pack.levels[i].state.has("Solution")) {
       return i;
     }
   }
@@ -475,8 +441,8 @@ const addSolution = (meta, str) => {
 const play = (sprites, pack, levelIdx = firstUnsolved(pack)) => {
   const level = pack.levels[levelIdx];
   const game = newGame(level.content);
-  if (level.meta.has("State.Snapshot")) {
-    loadSnapshot(game, level.meta.get("State.Snapshot"));
+  if (level.state.has("Snapshot")) {
+    loadSnapshot(game, level.state.get("Snapshot"));
   }
 
   const gameEl = document.querySelector("#game");
@@ -545,24 +511,24 @@ const play = (sprites, pack, levelIdx = firstUnsolved(pack)) => {
     game.touched = new Set();
     const moves = game.moves;
     if (moves === "") {
-      level.meta.delete("State.Snapshot", moves);
+      level.state.delete("Snapshot", moves);
     } else {
-      level.meta.set("State.Snapshot", moves);
+      level.state.set("Snapshot", moves);
     }
     snapshotEl.innerText = game.moves === "" ? "..." : moves;
     if (won(game)) {
-      addSolution(level.meta, game.moves);
+      addSolution(level.state, game.moves);
       refreshSolution();
     }
     levelButtons[levelIdx].innerText = levelStr(pack, levelIdx);
   };
   refreshSolution = () => {
     solutionEl.replaceChildren();
-    if (!level.meta.has("State.Solution")) {
+    if (!level.state.has("Solution")) {
       return;
     }
     
-    const moves = level.meta.get("State.Solution");
+    const moves = level.state.get("Solution");
     solutionEl.append(
       `Solution:\n${game.moves}\n`,
       elem(
@@ -570,10 +536,10 @@ const play = (sprites, pack, levelIdx = firstUnsolved(pack)) => {
         { onclick: () => { loadSnapshot(game, moves); refresh(); }},
         "Load solution"),
       "\n");
-    for (const [k, v] of level.meta) {
-      if (k.startsWith("State.Solution.")) {
+    for (const [k, v] of level.state) {
+      if (k.startsWith("Solution.")) {
         solutionEl.append(
-          `${k.substring("State.Solution.".length)}:\n${v}\n`,
+          `${k.substring("Solution.".length)}:\n${v}\n`,
           elem(
             "button",
             { onclick: () => { loadSnapshot(game, v); refresh(); }},
@@ -661,8 +627,7 @@ window.onload = () => {
     <p>
       Loading a .TXT can be used to load your previously saved progress or to load a level pack with different levels (which can then be saved again as e.g. a new .HTML file).
       .TXT loading supports normal ASCII Sokoban levels, but I'm not sure about the "level pack" format.
-      Seems to mostly work for the .TXT level packs I've trie, but I've seen some metadata/text/description stuff that's kind of weird and is only <em>kind of handled</em> by this stuff.
-      Oh well/okay.
+      Seems to mostly work for the .TXT level packs I've tested. Mostly.
     </p>
   </div>
   <pre id="levels">Title: Original
